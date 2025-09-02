@@ -8,7 +8,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Сборка Python-бэка через Poetry и PyInstaller
 add_custom_target(backend ALL
-    COMMAND poetry install --no-interaction --no-ansi
     COMMAND poetry run pyinstaller --onefile ${CMAKE_SOURCE_DIR}/src/backend.py --distpath ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMENT "Building Python backend"
