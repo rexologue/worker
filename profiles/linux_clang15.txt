@@ -9,3 +9,5 @@ build_type=Release
 [conf]
 tools.build:compiler_executables={"c": "clang", "cpp": "clang++"}
 tools.build:cxxflags=["-stdlib=libc++", "-O2"]
+tools.cmake.cmaketoolchain:generator=Ninja
+tools.build:jobs=8
