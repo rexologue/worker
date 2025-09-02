@@ -1,0 +1,15 @@
+[requires]
+qt/6.8.3
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[layout]
+cmake_layout
+
+[options]
+qt/*:shared=True
+qt/*:with_gui=True
+qt/*:with_widgets=True
+qt/*:with_network=True
