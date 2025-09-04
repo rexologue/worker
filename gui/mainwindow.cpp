@@ -5,6 +5,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
+#include <iostream>
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -13,7 +15,14 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     // Запускаем бэкенд в отдельном процессе
+    #ifdef WIN32
+    QString backendPath = QCoreApplication::applicationDirPath() + "/../backend.exe";
+    #else
     QString backendPath = QCoreApplication::applicationDirPath() + "/backend";
+    #endif
+
+    std::cout << backendPath.toStdString();
+
     backendProcess.start(backendPath);
 }
 
