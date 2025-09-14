@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "models": {
+    "0": {
+      "name": "0",
+      "spec": {
+        "source": "hf",
+        "kind": "auto",
+        "repo_id": "Vikhrmodels/QVikhr-3-4B-Instruction-GGUF",
+        "revision": null,
+        "repo_type": "model",
+        "gguf_quant": "Q4_K_M",
+        "allow_patterns": null,
+        "tags": []
+      },
+      "install": {
+        "installed": false,
+        "installed_at": null,
+        "path": null,
+        "files": [],
+        "selected_file": null,
+        "revision_resolved": null,
+        "size_bytes": null
+      },
+      "created_at": 1757693328.513499,
+      "updated_at": 1757693328.5135005
+    }
+  }
+}

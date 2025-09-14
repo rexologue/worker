@@ -1,0 +1,9 @@
+localhost: True
+
+broker:
+  host: '159.69.154.26'
+  port: 44856
+
+worker:
+  token: 'TOKEN_AAAA'
+  hf_token: dksokcovdovksovks
