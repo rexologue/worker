@@ -16,7 +16,7 @@ from utils.local_characteristics import get_inference_env_info
 
 
 class Worker:
-    def __init__(self, socket: ClientSecureSocket, token: str = "") -> None:
+    def __init__(self, socket: ClientSecureSocket, token: str = "", hf_token: str = "") -> None:
         """NAL NET Worker.
 
         Подключается к брокеру, принимает команды и выполняет задачи на локальной машине.
@@ -26,14 +26,14 @@ class Worker:
 
         self.token = token
         self.model_host: ModelHost | None = None
-        self.model_manager = ModelManager("")
+        self.model_manager = ModelManager(token_hf=hf_token)
 
     @classmethod
     async def create(
-        cls, host: str, port: int | None = None, token: str = ""
+        cls, host: str, port: int | None = None, token: str = "", hf_token: str = ""
     ) -> "Worker":
         socket = await ClientSecureSocket.create(host, port, token)
-        return cls(socket, token)
+        return cls(socket, token, hf_token)
 
     #######
     # API #
@@ -212,8 +212,8 @@ class Worker:
 ##############
 
 
-async def run_worker(server_host: str, server_port: int, token: str) -> None:
-    worker = await Worker.create(server_host, server_port, token)
+async def run_worker(server_host: str, server_port: int, token: str, hf_token: str) -> None:
+    worker = await Worker.create(server_host, server_port, token, hf_token)
 
     try:
         await worker.start()

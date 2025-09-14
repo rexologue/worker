@@ -17,7 +17,8 @@ def main():
         run_worker(
             server_host=params["broker"]["host"],
             server_port=params["broker"]["port"],
-            token=params["worker"]["token"]
+            token=params["worker"]["token"],
+            hf_token=params["worker"]["hf_token"]
         )
     )
 

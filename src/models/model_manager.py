@@ -318,8 +318,8 @@ class HuggingFaceSource(BaseSource):
                 repo_type=spec.repo_type,
                 revision=spec.revision,
                 local_dir=str(dest_dir),
-                local_dir_use_symlinks=True,
-                allow_patterns=[chosen_rel, "README*", "LICENSE*", "tokenizer.*", "*.json", "*.txt"]
+                allow_patterns=[chosen_rel, "README*", "LICENSE*", "tokenizer.*", "*.json", "*.txt"],
+                token=self.token
             )
             chosen_abs = dest_dir / chosen_rel
             files_on_disk = [str(p.relative_to(dest_dir)) for p in dest_dir.rglob("*") if p.is_file()]
@@ -339,8 +339,8 @@ class HuggingFaceSource(BaseSource):
             repo_type=spec.repo_type,
             revision=spec.revision,
             local_dir=str(dest_dir),
-            local_dir_use_symlinks=True,
-            allow_patterns=spec.allow_patterns
+            allow_patterns=spec.allow_patterns,
+            token=self.token
         )
         files_on_disk = [str(p.relative_to(dest_dir)) for p in dest_dir.rglob("*") if p.is_file()]
         info.installed = True

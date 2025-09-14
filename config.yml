@@ -6,4 +6,4 @@ broker:
 
 worker:
   token: 'TOKEN_AAAA'
-  hf_token: dksokcovdovksovks
+  hf_token: ***
