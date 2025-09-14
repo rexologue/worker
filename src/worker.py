@@ -15,46 +15,48 @@ from utils.local_characteristics import get_inference_env_info
 ############################
 
 
-class Worker(ClientSecureSocket):
-    def __init__(self, host: str, port: int | None = None, token: str = "") -> None:
-        """
-        NAL NET Worker.
+class Worker:
+    def __init__(self, socket: ClientSecureSocket, token: str = "") -> None:
+        """NAL NET Worker.
 
         Подключается к брокеру, принимает команды и выполняет задачи на локальной машине.
         """
-        super().__init__(host, port, token)
-        self.api = self._build_api()
+        self.worker = socket
+        self.worker.api = self._build_api()
 
         self.token = token
         self.model_host: ModelHost | None = None
         self.model_manager = ModelManager("")
 
+    @classmethod
+    async def create(
+        cls, host: str, port: int | None = None, token: str = ""
+    ) -> "Worker":
+        socket = await ClientSecureSocket.create(host, port, token)
+        return cls(socket, token)
+
     #######
     # API #
     #######
 
-    @staticmethod
-    def _build_api() -> ApiBlueprint:
+    def _build_api(self) -> ApiBlueprint:
         api = ApiBlueprint()
 
         # Отключение по инициативе брокера
         @api.handler("BYE")
-        async def bye(msg: Message[dict, "Worker"]) -> None:
-            worker: Worker = msg.socket
+        async def bye(msg: Message[dict, ClientSecureSocket]) -> None:
             reason = msg.payload.get("reason", "")
             print(f"[WORKER] Disconnected by broker: {reason}")
-            asyncio.create_task(worker._disconnect())
+            asyncio.create_task(self._disconnect())
 
         # Загрузка модели и подготовка рабочего окружения
         @api.handler("RUN_WORKER")
-        async def run_worker(msg: Message[dict, "Worker"]) -> None:
-            worker: Worker = msg.socket
-
+        async def run_worker(msg: Message[dict, ClientSecureSocket]) -> None:
             engine_type = msg.payload.get("engine_type")
-            model_id    = msg.payload.get("model_id")
-            repo_id     = msg.payload.get("repo_id")
-            quant       = msg.payload.get("quantization")
-            src         = msg.payload.get("source")
+            model_id = msg.payload.get("model_id")
+            repo_id = msg.payload.get("repo_id")
+            quant = msg.payload.get("quantization")
+            src = msg.payload.get("source")
  
             try:
                 engine = next((e for e in EngineType if e.name == engine_type), None)
@@ -64,14 +66,14 @@ class Worker(ClientSecureSocket):
             if engine is None or not repo_id:
                 print("[WORKER] Bad config in RUN_WORKER, disconnecting…")
                 asyncio.create_task(
-                    worker._disconnect(
+                    self._disconnect(
                         message="Disconnect due to bad config in RUN_WORKER"
                     )
                 )
                 return
 
             # Скачиваем модель и стартуем хост
-            worker.model_manager.add(
+            self.model_manager.add(
                 name=model_id, spec=ModelSpec(
                     source=src,
                     repo_id=repo_id,
@@ -79,10 +81,10 @@ class Worker(ClientSecureSocket):
                 )
             )
 
-            path = worker.model_manager.get_model(model_id, quant)
+            path = self.model_manager.get_model(model_id, quant)
             random_port = get_safe_free_port()
 
-            worker.model_host = ModelHost(
+            self.model_host = ModelHost(
                 engine_type=engine,
                 model_path=path,
                 port=random_port,
@@ -90,11 +92,11 @@ class Worker(ClientSecureSocket):
 
             try:
                 # запуск модели может быть блокирующим — уводим в пул
-                await asyncio.to_thread(worker.model_host.start)
+                await asyncio.to_thread(self.model_host.start)
             except Exception as e:
                 print(f"[WORKER] Model host failed: {e}")
                 asyncio.create_task(
-                    worker._disconnect(
+                    self._disconnect(
                         message=f"Cannot load model in RUN_WORKER: {e}"
                     )
                 )
@@ -102,19 +104,18 @@ class Worker(ClientSecureSocket):
 
             # Сообщаем брокеру, что готовы
             asyncio.create_task(
-                worker.send("WORKER_READY", {"status": "OK"})
+                self.worker.send("WORKER_READY", {"status": "OK"})
             )
             print(f"[WORKER] Ready! Model is running on port {random_port}")
 
         # Выполнение задачи генерации
         @api.handler("GENERATE")
-        async def generate(msg: Message[dict, "Worker"]) -> dict:
+        async def generate(msg: Message[dict, ClientSecureSocket]) -> dict:
             """
             ВАЖНО: возвращаем словарь как результат, чтобы Библиотека
             AioSock автоматически сформировала пакет "RESPONSE" c тем же id.
             Это позволяет брокеру ждать ответ через Future по message_id.
             """
-            worker: Worker = msg.socket
 
             task = msg.payload.get("task")
             worker_id = msg.payload.get("worker_id")
@@ -130,10 +131,10 @@ class Worker(ClientSecureSocket):
                 if prompt is None:
                     result = ["None", 0]
                 else:
-                    if worker.model_host is None:
+                    if self.model_host is None:
                         return {"error": "model is not loaded"}
                     # синхронный инференс — уводим в пул, если нужно
-                    result = await asyncio.to_thread(worker.model_host.generate, prompt)
+                    result = await asyncio.to_thread(self.model_host.generate, prompt)
             else:
                 result = [f"Unknown kind of task: {kind}", 0]
 
@@ -154,7 +155,7 @@ class Worker(ClientSecureSocket):
         HELLO_FROM_WORKER — отправляем токен и характеристики.
         """
         info = get_inference_env_info()
-        await self.send(
+        await self.worker.send(
             command="HELLO_FROM_WORKER",
             data={
                 "token": self.token,
@@ -164,7 +165,7 @@ class Worker(ClientSecureSocket):
 
     async def _disconnect(self, delay: float = 2.0, message: str | None = None) -> None:
         if message is not None:
-            await self.send(
+            await self.worker.send(
                 command="DISCONNECT_WORKER",
                 data={"reason": message},
             )
@@ -183,10 +184,10 @@ class Worker(ClientSecureSocket):
         а затем ждём завершения фоновой задачи.
         """
         # старт клиента (фоновая задача)
-        start_task = asyncio.create_task(super().start())
+        start_task = asyncio.create_task(self.worker.start())
 
         # дожидаемся установки соединения (см. ClientSecureSocket.wait_connection)
-        await self.wait_connection()
+        await self.worker.wait_connection()
 
         # шлём HELLO строго после установления защищённого канала
         await self._send_hello()
@@ -200,7 +201,10 @@ class Worker(ClientSecureSocket):
                 self.model_host.stop()
             except Exception:
                 pass
-        await super().stop()
+        await self.worker.stop()
+
+    def is_alive(self) -> bool:
+        return self.worker.is_alive()
 
 
 ##############
