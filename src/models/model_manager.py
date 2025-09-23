@@ -342,6 +342,7 @@ class HuggingFaceSource(BaseSource):
             allow_patterns=spec.allow_patterns,
             token=self.token
         )
+
         files_on_disk = [str(p.relative_to(dest_dir)) for p in dest_dir.rglob("*") if p.is_file()]
         info.installed = True
         info.installed_at = time.time()
@@ -349,6 +350,7 @@ class HuggingFaceSource(BaseSource):
         info.files = files_on_disk
         info.revision_resolved = spec.revision or "latest"
         info.size_bytes = sum((dest_dir / f).stat().st_size for f in files_on_disk if (dest_dir / f).exists())
+        
         return info
 
 

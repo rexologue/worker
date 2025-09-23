@@ -71,15 +71,24 @@ class Worker:
                     )
                 )
                 return
+            
+            is_model_installed = False
+            available_models = self.model_manager.list_models()
 
+            for model_info in available_models:
+                if model_id == model_info["name"]:
+                    is_model_installed = True
+                    break
+            
             # Скачиваем модель и стартуем хост
-            self.model_manager.add(
-                name=model_id, spec=ModelSpec(
-                    source=src,
-                    repo_id=repo_id,
-                    gguf_quant=quant
+            if not is_model_installed:
+                self.model_manager.add(
+                    name=model_id, spec=ModelSpec(
+                        source=src,
+                        repo_id=repo_id,
+                        gguf_quant=quant
+                    )
                 )
-            )
 
             path = self.model_manager.get_model(model_id, quant)
             random_port = get_safe_free_port()
@@ -155,11 +164,14 @@ class Worker:
         HELLO_FROM_WORKER — отправляем токен и характеристики.
         """
         info = get_inference_env_info()
+        available_models = self.model_manager.list_models()
+
         await self.worker.send(
             command="HELLO_FROM_WORKER",
             data={
                 "token": self.token,
                 "info": info,
+                "models": available_models
             },
         )
 
