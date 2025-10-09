@@ -4,7 +4,9 @@ from typing import Any
 from aiosock.typs import Message
 from aiosock import ApiBlueprint, ClientSecureSocket
 
-from models import ModelHost, ModelManager, ModelSpec
+from model_host import ModelHost
+from model_manager import ModelManager, ModelSpec
+
 from utils.enums import EngineType
 from utils.get_port import get_safe_free_port
 from utils.local_characteristics import get_inference_env_info
